@@ -1,0 +1,1029 @@
+<title>Three Sorts in Rust</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=JetBrains+Mono:wght@400;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/rust.min.js"></script>
+<style>
+:root{
+  --ground:#F6F7F9;
+  --panel:#FFFFFF;
+  --panel-2:#EDEFF3;
+  --ink:#14171C;
+  --ink-soft:#555E6B;
+  --ink-faint:#8A94A3;
+  --rule:#DCE0E7;
+  --accent:#0F6E5C;
+  --accent-soft:#E2F0EC;
+  --warn:#B4531B;
+  --cell-s:62%;
+  --cell-l:90%;
+  --cell-ring:#0F6E5C;
+  --code-bg:#FFFFFF;
+  --kw:#9A3412;
+  --str:#0F6E5C;
+  --num:#8A4B00;
+  --com:#7D8796;
+  --fn:#2B4D9B;
+  --shadow:0 1px 2px rgba(20,23,28,.05),0 8px 24px -12px rgba(20,23,28,.14);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#14171C;
+    --panel:#1B1F26;
+    --panel-2:#232832;
+    --ink:#E7EAEF;
+    --ink-soft:#A8B1BE;
+    --ink-faint:#6E7889;
+    --rule:#2C323C;
+    --accent:#4FC2A8;
+    --accent-soft:#17352E;
+    --warn:#E39158;
+    --cell-s:42%;
+    --cell-l:26%;
+    --cell-ring:#4FC2A8;
+    --code-bg:#171B21;
+    --kw:#E8956A;
+    --str:#7FD0B4;
+    --num:#E0B071;
+    --com:#79838F;
+    --fn:#8FB4F0;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#14171C;
+  --panel:#1B1F26;
+  --panel-2:#232832;
+  --ink:#E7EAEF;
+  --ink-soft:#A8B1BE;
+  --ink-faint:#6E7889;
+  --rule:#2C323C;
+  --accent:#4FC2A8;
+  --accent-soft:#17352E;
+  --warn:#E39158;
+  --cell-s:42%;
+  --cell-l:26%;
+  --cell-ring:#4FC2A8;
+  --code-bg:#171B21;
+  --kw:#E8956A;
+  --str:#7FD0B4;
+  --num:#E0B071;
+  --com:#79838F;
+  --fn:#8FB4F0;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.6);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Source Serif 4",Georgia,"Times New Roman",serif;
+  font-size:17px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{padding-inline:20px;padding-block:0 72px;max-width:1080px;margin:0 auto}
+.col{max-width:65ch;margin-inline:auto}
+
+/* ---------- header ---------- */
+header.top{
+  position:sticky;
+  top:env(safe-area-inset-top,0px);
+  z-index:20;
+  background:color-mix(in srgb,var(--ground) 88%,transparent);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--rule);
+}
+.top-in{
+  max-width:1080px;margin:0 auto;padding-inline:20px;
+  display:flex;align-items:center;gap:18px;min-height:52px;flex-wrap:wrap;
+}
+.brand{
+  font-family:"Bricolage Grotesque",system-ui,sans-serif;
+  font-weight:700;font-size:15px;letter-spacing:-.01em;margin-right:auto;
+}
+nav.jump{display:flex;gap:4px;flex-wrap:wrap}
+nav.jump a{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:11.5px;text-decoration:none;color:var(--ink-soft);
+  padding:5px 9px;border-radius:5px;border:1px solid transparent;
+}
+nav.jump a:hover{color:var(--ink);background:var(--panel-2);border-color:var(--rule)}
+nav.jump a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- hero ---------- */
+.hero{padding-block:52px 10px}
+.eyebrow{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 14px;
+}
+h1{
+  font-family:"Bricolage Grotesque",system-ui,sans-serif;
+  font-weight:700;font-size:clamp(34px,6.4vw,54px);line-height:1.04;
+  letter-spacing:-.025em;margin:0 0 18px;text-wrap:balance;
+}
+.lede{font-size:19.5px;color:var(--ink-soft);margin:0 0 10px;text-wrap:pretty}
+.lede strong{color:var(--ink);font-weight:600}
+
+/* ---------- sections ---------- */
+section{padding-block:38px 8px;scroll-margin-top:72px}
+h2{
+  font-family:"Bricolage Grotesque",system-ui,sans-serif;
+  font-weight:700;font-size:clamp(25px,4vw,34px);letter-spacing:-.02em;
+  margin:0 0 6px;text-wrap:balance;
+}
+h2 .idx{color:var(--accent);font-family:"JetBrains Mono",monospace;font-size:.58em;
+  vertical-align:.32em;margin-right:.5em;font-weight:400}
+h3{
+  font-family:"Bricolage Grotesque",system-ui,sans-serif;
+  font-weight:700;font-size:19px;letter-spacing:-.01em;margin:34px 0 8px;
+}
+h4{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-weight:700;font-size:12px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-faint);margin:28px 0 10px;
+}
+p{margin:0 0 15px;text-wrap:pretty}
+.sub{color:var(--ink-soft);font-size:16px;margin-bottom:22px}
+code{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:.855em;background:var(--panel-2);padding:1px 5px;border-radius:4px;
+  border:1px solid var(--rule);
+}
+a{color:var(--accent)}
+hr.div{border:0;border-top:1px solid var(--rule);margin:46px 0 0}
+
+/* ---------- code block ---------- */
+.codewrap{
+  margin:20px 0 6px;border:1px solid var(--rule);border-radius:9px;
+  background:var(--code-bg);box-shadow:var(--shadow);overflow:hidden;
+}
+.codehead{
+  display:flex;align-items:center;gap:10px;padding:8px 14px;
+  border-bottom:1px solid var(--rule);background:var(--panel-2);
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11.5px;color:var(--ink-soft);
+}
+.codehead .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}
+.codescroll{overflow-x:auto}
+pre.code{
+  margin:0;padding:14px 0;
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:13px;line-height:1.72;
+}
+.ln-row{display:flex;padding-inline:14px 18px;white-space:pre}
+.ln-row.hl{background:var(--accent-soft)}
+.ln{
+  flex:none;width:3.1em;text-align:right;padding-right:1.25em;
+  color:var(--ink-faint);user-select:none;
+}
+.ln-row.hl .ln{color:var(--accent);font-weight:700}
+.hljs-keyword,.hljs-meta{color:var(--kw)}
+.hljs-string{color:var(--str)}
+.hljs-number{color:var(--num)}
+.hljs-comment{color:var(--com);font-style:italic}
+.hljs-title,.hljs-title.function_{color:var(--fn)}
+.hljs-type,.hljs-built_in{color:var(--fn)}
+
+/* ---------- annotations ---------- */
+.anns{display:flex;flex-direction:column;gap:2px;margin:14px 0 6px}
+.ann{
+  display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;
+  padding:9px 12px;border-radius:7px;border:1px solid transparent;
+  cursor:default;transition:background .12s,border-color .12s;
+}
+.ann:hover{background:var(--panel);border-color:var(--rule)}
+.ann .tag{
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;font-weight:700;
+  color:var(--accent);background:var(--accent-soft);border-radius:5px;
+  padding:3px 7px;white-space:nowrap;margin-top:3px;
+}
+.ann p{margin:0;font-size:15.5px;line-height:1.56}
+
+/* ---------- stepper ---------- */
+.stage{
+  margin:22px 0;border:1px solid var(--rule);border-radius:11px;
+  background:var(--panel);box-shadow:var(--shadow);overflow:hidden;
+}
+.stage-head{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:11px 15px;border-bottom:1px solid var(--rule);background:var(--panel-2);
+}
+.stage-title{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);
+  margin-right:auto;
+}
+.btn{
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;
+  background:var(--panel);color:var(--ink);border:1px solid var(--rule);
+  border-radius:6px;padding:5px 11px;cursor:pointer;line-height:1.5;
+}
+.btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.38;cursor:default}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+:root[data-theme="dark"] .btn.primary,
+:root:not([data-theme="light"]) .btn.primary{color:#0B1F1A}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .btn.primary{color:#fff}}
+.stage-body{padding:20px 15px 16px}
+.cells{display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end;min-height:62px}
+.cell{
+  position:relative;min-width:46px;flex:0 0 auto;
+  border-radius:7px;border:1.5px solid transparent;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+  padding:5px 7px 6px;transition:background .18s,transform .18s,border-color .18s;
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+}
+.cell .bar{width:100%;border-radius:3px;background:currentColor;opacity:.32;margin-bottom:5px}
+.cell .val{font-size:14px;font-weight:700;color:var(--ink);line-height:1}
+.cell .idx{font-size:9.5px;color:var(--ink-faint);margin-top:3px;line-height:1}
+.cell.cmp{border-color:var(--cell-ring);transform:translateY(-5px)}
+.cell.piv{border-color:var(--warn);border-style:dashed}
+.cell.done{opacity:.52}
+.cell.sep{min-width:0;width:3px;background:var(--rule);border-radius:2px;align-self:stretch;padding:0}
+.caption{
+  margin-top:16px;font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:12.5px;color:var(--ink-soft);min-height:2.6em;line-height:1.45;
+}
+.caption b{color:var(--ink)}
+.track{
+  margin-top:12px;height:4px;border-radius:2px;background:var(--panel-2);
+  overflow:hidden;border:1px solid var(--rule);
+}
+.track i{display:block;height:100%;background:var(--accent);transition:width .18s}
+.decks{display:flex;flex-direction:column;gap:14px}
+.deck-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.deck-label{
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11.5px;
+  color:var(--ink-faint);width:52px;flex:none;
+}
+
+/* ---------- recursion tree ---------- */
+.tree{display:flex;flex-direction:column;gap:9px;padding:4px 0}
+.tlevel{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.tnode{
+  display:flex;gap:3px;padding:5px 7px;border-radius:7px;
+  border:1px solid var(--rule);background:var(--panel-2);
+}
+.tnode.leaf{border-color:var(--accent);background:var(--accent-soft)}
+.tcell{
+  font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;font-weight:700;
+  color:var(--ink);min-width:26px;text-align:center;border-radius:4px;padding:2px 4px;
+}
+.treehint{
+  text-align:center;font-family:"JetBrains Mono",monospace;font-size:11px;
+  color:var(--ink-faint);padding:3px 0;
+}
+
+/* ---------- table ---------- */
+.tablewrap{overflow-x:auto;margin:20px 0;border:1px solid var(--rule);border-radius:9px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:540px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+thead th{
+  background:var(--panel-2);font-family:"Bricolage Grotesque",sans-serif;
+  font-weight:700;font-size:13px;
+}
+tbody tr:last-child td{border-bottom:0}
+td code{font-size:12.5px}
+.mono-cell{font-family:"JetBrains Mono",monospace;font-size:12.5px}
+
+/* ---------- callout ---------- */
+.note{
+  margin:24px 0;padding:16px 18px;border-radius:9px;
+  background:var(--panel);border:1px solid var(--rule);border-left:3px solid var(--accent);
+}
+.note.warn{border-left-color:var(--warn)}
+.note h5{
+  margin:0 0 7px;font-family:"Bricolage Grotesque",sans-serif;font-size:15px;font-weight:700;
+}
+.note.warn h5{color:var(--warn)}
+.note p:last-child{margin-bottom:0}
+.note p{font-size:15.5px}
+
+footer{
+  margin-top:50px;padding-top:20px;border-top:1px solid var(--rule);
+  font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-faint);
+  display:flex;gap:14px;flex-wrap:wrap;justify-content:space-between;
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+@media (max-width:560px){
+  body{font-size:16px}
+  .cell{min-width:40px}
+  .ann{grid-template-columns:1fr;gap:5px}
+}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <span class="brand">Three Sorts in Rust</span>
+    <nav class="jump">
+      <a href="#bubble">bubble_sort</a>
+      <a href="#merge">merge_sort</a>
+      <a href="#quick">quick_sort</a>
+      <a href="#compare">compare</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+<div class="col">
+
+  <div class="hero">
+    <p class="eyebrow">v1-sorting &middot; src/lib.rs</p>
+    <h1>Bubble, merge and quick &mdash; line by line</h1>
+    <p class="lede">Three sorting algorithms from one Rust file, each walked through a line at a time. Every trace below is generated by running <strong>the same steps your code runs</strong>, on the arrays from your own tests.</p>
+  </div>
+
+  <p>The three functions differ in more than speed &mdash; look at their signatures first, because that difference is really about <em>ownership</em>:</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Function</th><th>Signature</th><th>What it does to your data</th></tr></thead>
+      <tbody>
+        <tr><td class="mono-cell">bubble_sort</td><td><code>&amp;mut [T]</code></td><td>Borrows your slice and rearranges it in place. You keep the <code>Vec</code>.</td></tr>
+        <tr><td class="mono-cell">merge_sort</td><td><code>Vec&lt;T&gt; -&gt; Vec&lt;T&gt;</code></td><td>Consumes your vector and hands back a new one. The original is moved away.</td></tr>
+        <tr><td class="mono-cell">quick_sort</td><td><code>&amp;mut [T]</code></td><td>Borrows and rearranges in place, like bubble.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>That is why the tests read <code>bubble_sort(&amp;mut v);</code> but <code>let v = merge_sort(v);</code> &mdash; the second one has to rebind, because the old <code>v</code> no longer exists.</p>
+
+</div><!-- /col -->
+
+<hr class="div">
+
+<!-- ============ BUBBLE ============ -->
+<section id="bubble">
+<div class="col">
+  <h2><span class="idx">01</span>bubble_sort</h2>
+  <p class="sub">Walk the list comparing neighbours. Swap any pair that is out of order. Each full pass drags the largest remaining value to the right end &mdash; like a bubble rising.</p>
+</div>
+
+<div class="col">
+  <div class="codewrap">
+    <div class="codehead"><span class="dot"></span>src/lib.rs &middot; lines 4&ndash;18</div>
+    <div class="codescroll"><pre class="code" id="code-bubble"></pre></div>
+  </div>
+
+  <div class="anns" id="ann-bubble"></div>
+
+  <h3>Watch it run</h3>
+  <p>This is <code>[4, 6, 1, 8, 11, 13, 2]</code> from <code>test_bubble_sort</code>. Cell colour encodes the <em>value</em> &mdash; teal is small, amber is large &mdash; so a sorted array reads as a clean ramp. Faded cells on the right are parked for good.</p>
+</div>
+
+  <div class="stage">
+    <div class="stage-head">
+      <span class="stage-title">bubble_sort trace</span>
+      <button class="btn" data-act="first" data-for="bubble">&#124;&#9664;</button>
+      <button class="btn" data-act="prev" data-for="bubble">&#9664;</button>
+      <button class="btn primary" data-act="play" data-for="bubble">Play</button>
+      <button class="btn" data-act="next" data-for="bubble">&#9654;</button>
+      <button class="btn" data-act="last" data-for="bubble">&#9654;&#124;</button>
+    </div>
+    <div class="stage-body">
+      <div class="cells" id="cells-bubble"></div>
+      <div class="caption" id="cap-bubble"></div>
+      <div class="track"><i id="trk-bubble" style="width:0%"></i></div>
+    </div>
+  </div>
+
+<div class="col">
+  <h4>Cost</h4>
+  <p><strong>O(n&sup2;)</strong> &mdash; up to <code>n</code> passes of up to <code>n</code> comparisons. For 1,000 items that is about a million comparisons. The <code>sorted</code> flag makes the best case (an already-sorted list) <strong>O(n)</strong>: one pass, no swaps, return.</p>
+</div>
+</section>
+
+<hr class="div">
+
+<!-- ============ MERGE ============ -->
+<section id="merge">
+<div class="col">
+  <h2><span class="idx">02</span>merge_sort</h2>
+  <p class="sub">Split the list in half. Sort each half by calling yourself. Then merge two sorted lists into one &mdash; which is cheap, because you only ever compare the two front items.</p>
+</div>
+
+<div class="col">
+  <div class="codewrap">
+    <div class="codehead"><span class="dot"></span>src/lib.rs &middot; lines 20&ndash;40</div>
+    <div class="codescroll"><pre class="code" id="code-merge1"></pre></div>
+  </div>
+  <div class="anns" id="ann-merge1"></div>
+
+  <h3>The recursion tree</h3>
+  <p>Splitting keeps going until every piece has one item &mdash; and a one-item list is already sorted. That is the base case on line 27, the thing that stops the recursion. These are the exact 15 pieces your <code>println!</code> printed:</p>
+</div>
+
+  <div class="stage">
+    <div class="stage-head"><span class="stage-title">splitting down &mdash; v.split_off(v.len() / 2)</span></div>
+    <div class="stage-body"><div class="tree" id="tree-split"></div></div>
+  </div>
+
+  <div class="stage">
+    <div class="stage-head"><span class="stage-title">merging up &mdash; each level is now sorted</span></div>
+    <div class="stage-body"><div class="tree" id="tree-merge"></div></div>
+  </div>
+
+<div class="col">
+  <h3>The merge loop</h3>
+  <p>Picture two sorted <strong>decks of cards</strong>, face up. <code>a_peek</code> and <code>b_peek</code> are the top card of each deck; <code>next()</code> deals the following one. Each is an <code>Option&lt;T&gt;</code>: <code>Some(card)</code>, or <code>None</code> when that deck runs out.</p>
+
+  <div class="codewrap">
+    <div class="codehead"><span class="dot"></span>src/lib.rs &middot; lines 41&ndash;67</div>
+    <div class="codescroll"><pre class="code" id="code-merge2"></pre></div>
+  </div>
+  <div class="anns" id="ann-merge2"></div>
+
+  <p>Here are the last two halves coming together. Watch that only the <em>front</em> card of each deck is ever compared:</p>
+</div>
+
+  <div class="stage">
+    <div class="stage-head">
+      <span class="stage-title">merge trace</span>
+      <button class="btn" data-act="first" data-for="merge">&#124;&#9664;</button>
+      <button class="btn" data-act="prev" data-for="merge">&#9664;</button>
+      <button class="btn primary" data-act="play" data-for="merge">Play</button>
+      <button class="btn" data-act="next" data-for="merge">&#9654;</button>
+      <button class="btn" data-act="last" data-for="merge">&#9654;&#124;</button>
+    </div>
+    <div class="stage-body">
+      <div class="decks">
+        <div class="deck-row"><span class="deck-label">deck a</span><div class="cells" id="cells-merge-a"></div></div>
+        <div class="deck-row"><span class="deck-label">deck b</span><div class="cells" id="cells-merge-b"></div></div>
+        <div class="deck-row"><span class="deck-label">res</span><div class="cells" id="cells-merge-r"></div></div>
+      </div>
+      <div class="caption" id="cap-merge"></div>
+      <div class="track"><i id="trk-merge" style="width:0%"></i></div>
+    </div>
+  </div>
+
+<div class="col">
+  <div class="note">
+    <h5>Why <code>.take()</code> and <code>ref</code> are there</h5>
+    <p><code>ref a_val</code> <em>borrows</em> the value inside the <code>Option</code> so you can compare it without moving it out &mdash; you are only peeking, the card must stay put. Then <code>.take()</code> is what lets you finally move it: it swaps the <code>Option</code> to <code>None</code> and hands you the contents. Without it the compiler would reject moving a value out of something you only borrowed.</p>
+  </div>
+
+  <h4>Cost</h4>
+  <p><strong>O(n log n)</strong> &mdash; the tree is <code>log&#8322;(n)</code> levels deep and each level merges all <code>n</code> items. Your comment on line 22 puts it well: for 1024 items that is <code>1024 &times; 10</code> instead of <code>1024 &times; 1024</code>, roughly 100&times; less work than bubble sort. The cost is memory: unlike the other two, this one allocates new vectors.</p>
+</div>
+</section>
+
+<hr class="div">
+
+<!-- ============ QUICK ============ -->
+<section id="quick">
+<div class="col">
+  <h2><span class="idx">03</span>quick_sort</h2>
+  <p class="sub">Pick one item &mdash; the pivot. Shove everything smaller to its left and everything bigger to its right. The pivot is now in its final position forever. Repeat on the left chunk and the right chunk.</p>
+
+  <h3>Step one: <code>pivot</code> does the shoving</h3>
+
+  <div class="codewrap">
+    <div class="codehead"><span class="dot"></span>src/lib.rs &middot; lines 74&ndash;85</div>
+    <div class="codescroll"><pre class="code" id="code-pivot"></pre></div>
+  </div>
+  <div class="anns" id="ann-pivot"></div>
+
+  <p>The two swaps on lines 79&ndash;80 look odd until you see them move. The pivot (dashed outline) shuffles one step right each time, with the growing &ldquo;smaller than pivot&rdquo; group behind it:</p>
+</div>
+
+  <div class="stage">
+    <div class="stage-head">
+      <span class="stage-title">pivot trace &mdash; the partition step</span>
+      <button class="btn" data-act="first" data-for="pivot">&#124;&#9664;</button>
+      <button class="btn" data-act="prev" data-for="pivot">&#9664;</button>
+      <button class="btn primary" data-act="play" data-for="pivot">Play</button>
+      <button class="btn" data-act="next" data-for="pivot">&#9654;</button>
+      <button class="btn" data-act="last" data-for="pivot">&#9654;&#124;</button>
+    </div>
+    <div class="stage-body">
+      <div class="cells" id="cells-pivot"></div>
+      <div class="caption" id="cap-pivot"></div>
+      <div class="track"><i id="trk-pivot" style="width:0%"></i></div>
+    </div>
+  </div>
+
+<div class="col">
+  <p>That final state is exactly what <code>test_pivot</code> asserts on line 127: for every index <code>x</code>, &ldquo;<code>v[x]</code> is smaller than the pivot&rdquo; is true in precisely the same cases as &ldquo;<code>x</code> comes before <code>p</code>&rdquo;.</p>
+
+  <h3>Step two: <code>quick_sort</code> recurses on both sides</h3>
+
+  <div class="codewrap">
+    <div class="codehead"><span class="dot"></span>src/lib.rs &middot; lines 86&ndash;95</div>
+    <div class="codescroll"><pre class="code" id="code-quick"></pre></div>
+  </div>
+  <div class="anns" id="ann-quick"></div>
+
+  <div class="note">
+    <h5>Why <code>split_at_mut</code> and not two slices</h5>
+    <p>You cannot normally hold two <code>&amp;mut</code> into one collection &mdash; the borrow checker rejects it (error E0499). <code>split_at_mut</code> is the escape hatch: it proves to the compiler that the two halves do not overlap, so both mutable borrows are safe. Skipping <code>b[0]</code> matters twice over: the pivot is already final, <em>and</em> it guarantees each recursive call gets a strictly smaller slice, so the recursion terminates.</p>
+  </div>
+
+  <h4>Cost</h4>
+  <p><strong>O(n log n)</strong> typically, but <strong>O(n&sup2;)</strong> in the worst case &mdash; and this implementation walks right into it. Because the pivot is always the <em>first</em> element, an already-sorted input partitions into &ldquo;nothing&rdquo; and &ldquo;everything&rdquo; every time, making the recursion <code>n</code> levels deep instead of <code>log n</code>. Production implementations pick a random pivot, or the median of three, to avoid exactly this.</p>
+</div>
+</section>
+
+<hr class="div">
+
+<!-- ============ COMPARE ============ -->
+<section id="compare">
+<div class="col">
+  <h2><span class="idx">04</span>Side by side</h2>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th></th><th>Bubble</th><th>Merge</th><th>Quick</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Typical</strong></td><td class="mono-cell">O(n&sup2;)</td><td class="mono-cell">O(n log n)</td><td class="mono-cell">O(n log n)</td></tr>
+        <tr><td><strong>Best</strong></td><td class="mono-cell">O(n) &mdash; sorted flag</td><td class="mono-cell">O(n log n)</td><td class="mono-cell">O(n log n)</td></tr>
+        <tr><td><strong>Worst</strong></td><td class="mono-cell">O(n&sup2;)</td><td class="mono-cell">O(n log n)</td><td class="mono-cell">O(n&sup2;) &mdash; sorted input</td></tr>
+        <tr><td><strong>Extra memory</strong></td><td>none</td><td>O(n), builds new vectors</td><td>none, just the call stack</td></tr>
+        <tr><td><strong>Ownership</strong></td><td>borrows, mutates</td><td>consumes, returns</td><td>borrows, mutates</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The signature differences are the borrow-versus-consume distinction showing up in real code: bubble and quick take <code>&amp;mut [T]</code> and edit what you already own; merge takes <code>Vec&lt;T&gt;</code> by value and produces something new.</p>
+
+  <div class="note warn">
+    <h5>The test that never ran</h5>
+    <p><code>test_quick_sort</code> was missing its <code>#[test]</code> attribute, so <code>cargo test</code> reported &ldquo;4 passed&rdquo; while silently skipping it &mdash; the only hint was a <code>dead_code</code> warning. Its expected value was also wrong, dropping the <code>19</code> from an eight-item array. Both are fixed now, and the suite runs <strong>5 tests, all passing</strong>.</p>
+  </div>
+
+  <p>Run them yourself with the traces visible:</p>
+  <div class="codewrap">
+    <div class="codehead"><span class="dot"></span>terminal</div>
+    <div class="codescroll"><pre class="code" id="code-sh"></pre></div>
+  </div>
+
+  <footer>
+    <span>v1-sorting &middot; rustc 1.98.1 &middot; edition 2024</span>
+    <span>github.com/guvenbe/dsarust</span>
+  </footer>
+</div>
+</section>
+</div><!-- /wrap -->
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   1. Source listings + per-line annotations
+   ============================================================ */
+const SRC = {
+  bubble: {start:4, code:
+`pub fn bubble_sort<T: PartialOrd + Debug>(v: &mut [T]) {
+    for p in 0..v.len() {
+        println!("{:?}", v);
+        let mut sorted = true;
+        for i in 0..(v.len() - 1) - p {
+            if v[i] > v[i + 1] {
+                v.swap(i, i + 1);
+                sorted = false;
+            }
+        }
+        if sorted {
+            return;
+        }
+    }
+}`},
+  merge1: {start:20, code:
+`pub fn merge_sort<T: PartialOrd + Debug>(mut v: Vec<T>) -> Vec<T> {
+    println!("{:?}", v);
+
+    if v.len() <= 1 {
+        return v;
+    }
+
+    let mut res = Vec::with_capacity(v.len());
+    let b = v.split_off(v.len() / 2);
+    let a = merge_sort(v);
+    let b = merge_sort(b);
+
+    let mut b_it = b.into_iter();
+    let mut a_it = a.into_iter();
+    let mut a_peek = a_it.next();
+    let mut b_peek = b_it.next();`},
+  merge2: {start:41, code:
+`    loop {
+        match a_peek {
+            Some(ref a_val) => match b_peek {
+                Some(ref b_val) => {
+                    if b_val < a_val {
+                        res.push(b_peek.take().unwrap());
+                        b_peek = b_it.next();
+                    } else {
+                        res.push(a_peek.take().unwrap());
+                        a_peek = a_it.next();
+                    }
+                }
+                None => {
+                    res.push(a_peek.take().unwrap());
+                    res.extend(a_it);
+                    return res;
+                }
+            },
+            None => {
+                if let Some(b_val) = b_peek {
+                    res.push(b_val);
+                }
+                res.extend(b_it);
+                return res;
+            }
+        }
+    }
+}`},
+  pivot: {start:74, code:
+`pub fn pivot<T: PartialOrd>(v: &mut [T]) -> usize {
+    let mut p = 0;
+    for i in 1..v.len() {
+        if v[i] < v[p] {
+            //move our pivot forward 1 and put this element before it
+            v.swap(p + 1, i);
+            v.swap(p, p + 1);
+            p += 1;
+        }
+    }
+    p
+}`},
+  quick: {start:86, code:
+`pub fn quick_sort<T: PartialOrd + Debug>(v: &mut [T]) {
+    if v.len() <= 1 {
+        return;
+    }
+    let p = pivot(v);
+    println!("{:?}", v);
+    let (a, b) = v.split_at_mut(p);
+    quick_sort(a);
+    quick_sort(&mut b[1..]); //middle element already sorted
+}`},
+  sh: {start:null, lang:"bash", code:
+`cargo test -- --nocapture --test-threads=1
+cargo test test_quick_sort -- --nocapture`}
+};
+
+const ANN = {
+  bubble: [
+    ["4", "<code>&lt;T: PartialOrd + Debug&gt;</code> &mdash; works on any type that can be compared with <code>&gt;</code> and printed with <code>{:?}</code>. <code>v: &amp;mut [T]</code> is a mutable borrow of a slice: not ownership, so the caller keeps their <code>Vec</code> and this function edits it in place."],
+    ["5", "<code>p</code> counts completed passes. After <code>p</code> passes the last <code>p</code> items are already in their final spots."],
+    ["7", "Optimism: &ldquo;maybe it is already sorted.&rdquo; Any swap below disproves it."],
+    ["8", "Two subtractions, each with a reason. <code>- 1</code> because we compare <code>v[i]</code> with <code>v[i + 1]</code>, so <code>i</code> must stop one short of the end. <code>- p</code> because the last <code>p</code> items are already sorted &mdash; this is what makes each pass cheaper than the last."],
+    ["9&ndash;12", "Neighbour out of order? Swap it, and record that the list was not sorted after all."],
+    ["14&ndash;16", "A whole pass with zero swaps means nothing is out of order. Finish early &mdash; this is what turns an already-sorted list into a single O(n) pass."]
+  ],
+  merge1: [
+    ["20", "Note the signature: this takes <code>Vec&lt;T&gt;</code> <strong>by value</strong> and returns a new one. It consumes your vector, which is why the test has to rebind with <code>let v = merge_sort(v);</code>."],
+    ["23&ndash;25", "The base case &mdash; the thing that stops infinite recursion. A list of 0 or 1 items is already sorted, so hand it straight back."],
+    ["27", "One allocation up front, because the final size is known exactly."],
+    ["28", "<code>split_off(mid)</code> cuts the vector in two: <code>v</code> keeps the left half, the right half is returned into <code>b</code>."],
+    ["29&ndash;30", "Recursion: each half is sorted by the same function. Line 30 <em>shadows</em> <code>b</code> &mdash; the unsorted <code>b</code> is replaced by the sorted one."],
+    ["32&ndash;35", "Two sorted decks. <code>a_peek</code> and <code>b_peek</code> hold the top card of each; <code>next()</code> deals the following one."]
+  ],
+  merge2: [
+    ["43&ndash;51", "Both decks still have a card: compare the two tops, move the smaller one into <code>res</code>, and deal a replacement from that same deck."],
+    ["45", "<code>ref a_val</code> borrows the value inside the <code>Option</code> rather than moving it out &mdash; you are only peeking."],
+    ["46", "<code>.take()</code> swaps the <code>Option</code> to <code>None</code> and hands you the contents. That is what makes the move legal after the borrow above."],
+    ["53&ndash;57", "Deck b is empty. Everything left in <code>a</code> is sorted and larger than everything placed so far, so <code>extend</code> dumps it in wholesale &mdash; no more comparing."],
+    ["59&ndash;65", "Deck a is empty. Mirror image: push whatever <code>b_peek</code> still holds, then dump the rest of deck b."]
+  ],
+  pivot: [
+    ["75", "The pivot is <strong>the first element</strong>, and <code>p</code> tracks where it currently sits. The invariant being maintained: everything at indices <code>0..p</code> is smaller than the pivot."],
+    ["76&ndash;77", "Walk the rest of the slice. Is this item smaller than the pivot?"],
+    ["79", "<code>swap(p + 1, i)</code> brings the small item up next to the pivot."],
+    ["80", "<code>swap(p, p + 1)</code> then slides it <em>past</em> the pivot, so it lands before it. The pivot drifts one step right."],
+    ["81", "<code>p</code> follows the pivot to its new index."],
+    ["84", "Return where the pivot ended up &mdash; that index is now final for the rest of the sort."]
+  ],
+  quick: [
+    ["87&ndash;89", "Base case: a slice of 0 or 1 items is already sorted."],
+    ["90", "Partition. Afterwards <code>v[p]</code> is in its permanent position."],
+    ["92", "<code>split_at_mut(p)</code> hands back two mutable slices of the <em>same</em> array &mdash; the one sanctioned way to hold two <code>&amp;mut</code> into one collection."],
+    ["93&ndash;94", "Recurse on the left chunk, and on the right chunk minus its first element &mdash; <code>b[0]</code> is the pivot, already done."]
+  ]
+};
+
+/* ---- render code with real lib.rs line numbers ---- */
+function renderCode(elId, spec){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  let html;
+  try{
+    html = hljs.highlight(spec.code, {language: spec.lang || "rust"}).value;
+  }catch(e){
+    html = spec.code.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  }
+  const lines = html.split("\n");
+  el.innerHTML = lines.map((ln,i) => {
+    const num = spec.start === null ? "" : (spec.start + i);
+    return '<div class="ln-row"><span class="ln">' + num + '</span><span class="lc">' +
+           (ln || " ") + "</span></div>";
+  }).join("");
+}
+
+function renderAnns(elId, rows){
+  const el = document.getElementById(elId);
+  if(!el || !rows) return;
+  el.innerHTML = rows.map(r =>
+    '<div class="ann"><span class="tag">' + r[0] + '</span><p>' + r[1] + "</p></div>"
+  ).join("");
+}
+
+/* ============================================================
+   2. Value ramp — colour encodes the sort key
+   ============================================================ */
+let RMIN = 0, RMAX = 1;
+function setRange(vals){
+  RMIN = Math.min.apply(null, vals);
+  RMAX = Math.max.apply(null, vals);
+  if(RMAX === RMIN) RMAX = RMIN + 1;
+}
+function hueOf(v){
+  const t = (v - RMIN) / (RMAX - RMIN);          // 0 = smallest, 1 = largest
+  return Math.round(185 - t * 150);              // teal 185 -> amber 35
+}
+function tint(v){
+  return "hsl(" + hueOf(v) + " var(--cell-s) var(--cell-l))";
+}
+function barColor(v){
+  return "hsl(" + hueOf(v) + " 55% 45%)";
+}
+
+function cellEl(v, idx, opts){
+  opts = opts || {};
+  const d = document.createElement("div");
+  d.className = "cell" + (opts.cls ? " " + opts.cls : "");
+  d.style.background = tint(v);
+  const h = 8 + Math.round(((v - RMIN) / (RMAX - RMIN)) * 26);
+  const bar = document.createElement("div");
+  bar.className = "bar";
+  bar.style.height = h + "px";
+  bar.style.color = barColor(v);
+  d.appendChild(bar);
+  const val = document.createElement("div");
+  val.className = "val";
+  val.textContent = v;
+  d.appendChild(val);
+  if(idx !== null && idx !== undefined){
+    const ix = document.createElement("div");
+    ix.className = "idx";
+    ix.textContent = idx;
+    d.appendChild(ix);
+  }
+  return d;
+}
+
+function paint(container, arr, decorate){
+  container.innerHTML = "";
+  arr.forEach((v,i) => {
+    const o = decorate ? decorate(i, v) : {};
+    container.appendChild(cellEl(v, o.hideIdx ? null : i, o));
+  });
+}
+
+/* ============================================================
+   3. Frame generators — these mirror the Rust exactly
+   ============================================================ */
+function bubbleFrames(input){
+  const v = input.slice(), f = [];
+  f.push({v:v.slice(), parked:0, note:"Start. Nothing is parked yet."});
+  for(let p = 0; p < v.length; p++){
+    let sorted = true;
+    for(let i = 0; i < v.length - 1 - p; i++){
+      f.push({v:v.slice(), a:i, b:i+1, parked:p,
+        note:"Is <b>" + v[i] + "</b> &gt; <b>" + v[i+1] + "</b>? " + (v[i] > v[i+1] ? "Yes." : "No, leave it.")});
+      if(v[i] > v[i+1]){
+        const t = v[i]; v[i] = v[i+1]; v[i+1] = t;
+        sorted = false;
+        f.push({v:v.slice(), a:i, b:i+1, parked:p, note:"Swapped."});
+      }
+    }
+    const parkedVal = v[v.length - 1 - p];
+    f.push({v:v.slice(), parked:p+1,
+      note:"Pass " + (p+1) + " done &mdash; <b>" + parkedVal + "</b> is parked at the end. Next pass stops " + (p+1) + " earlier."});
+    if(sorted){
+      f.push({v:v.slice(), parked:v.length,
+        note:"That pass made no swaps, so <b>sorted</b> stayed true &mdash; early return."});
+      break;
+    }
+  }
+  return f;
+}
+
+function pivotFrames(input){
+  const v = input.slice(), f = [];
+  let p = 0;
+  f.push({v:v.slice(), p:p, note:"Pivot is the first element: <b>" + v[0] + "</b>."});
+  for(let i = 1; i < v.length; i++){
+    f.push({v:v.slice(), p:p, i:i,
+      note:"Is <b>" + v[i] + "</b> &lt; pivot <b>" + v[p] + "</b>? " + (v[i] < v[p] ? "Yes." : "No, move on.")});
+    if(v[i] < v[p]){
+      let t = v[p+1]; v[p+1] = v[i]; v[i] = t;
+      f.push({v:v.slice(), p:p, i:i, note:"<b>swap(p + 1, i)</b> &mdash; bring it next to the pivot."});
+      t = v[p]; v[p] = v[p+1]; v[p+1] = t;
+      p += 1;
+      f.push({v:v.slice(), p:p, i:i,
+        note:"<b>swap(p, p + 1)</b> &mdash; it lands before the pivot, which drifts right. p is now " + p + "."});
+    }
+  }
+  f.push({v:v.slice(), p:p, done:true,
+    note:"Returns <b>" + p + "</b>. Pivot <b>" + v[p] + "</b> is final: everything left of it is smaller, everything right is larger."});
+  return f;
+}
+
+function mergeFrames(a0, b0){
+  const a = a0.slice(), b = b0.slice(), res = [], f = [];
+  let ai = 0, bi = 0;
+  f.push({a:a.slice(), b:b.slice(), r:[], note:"Two sorted decks. Only the front card of each is ever compared."});
+  while(ai < a.length && bi < b.length){
+    const take_b = b[bi] < a[ai];
+    f.push({a:a.slice(ai), b:b.slice(bi), r:res.slice(), ha:true, hb:true,
+      note:"Compare fronts: <b>" + a[ai] + "</b> and <b>" + b[bi] + "</b> &rarr; take <b>" + (take_b ? b[bi] : a[ai]) + "</b>."});
+    res.push(take_b ? b[bi++] : a[ai++]);
+    f.push({a:a.slice(ai), b:b.slice(bi), r:res.slice(),
+      note:"Pushed to <b>res</b>, and dealt the next card from that deck."});
+  }
+  if(ai < a.length){
+    f.push({a:a.slice(ai), b:[], r:res.slice(), ha:true,
+      note:"Deck b is empty &mdash; <b>res.extend(a_it)</b> dumps the rest of a in one go."});
+    while(ai < a.length) res.push(a[ai++]);
+  }else{
+    f.push({a:[], b:b.slice(bi), r:res.slice(), hb:true,
+      note:"Deck a is empty &mdash; <b>res.extend(b_it)</b> dumps the rest of b in one go."});
+    while(bi < b.length) res.push(b[bi++]);
+  }
+  f.push({a:[], b:[], r:res.slice(), note:"Merged and returned."});
+  return f;
+}
+
+/* ---- merge-sort recursion tree, built the same way the Rust splits ---- */
+function buildTree(v){
+  if(v.length <= 1) return {v:v, leaf:true, sorted:v.slice()};
+  const mid = Math.floor(v.length / 2);
+  const left = buildTree(v.slice(0, mid));
+  const right = buildTree(v.slice(mid));
+  const s = [], A = left.sorted, B = right.sorted;
+  let i = 0, j = 0;
+  while(i < A.length && j < B.length) s.push(B[j] < A[i] ? B[j++] : A[i++]);
+  while(i < A.length) s.push(A[i++]);
+  while(j < B.length) s.push(B[j++]);
+  return {v:v, left:left, right:right, sorted:s};
+}
+function levelsOf(root){
+  const out = [];
+  let cur = [root];
+  while(cur.length){
+    out.push(cur);
+    const nxt = [];
+    cur.forEach(n => { if(n.left){ nxt.push(n.left); nxt.push(n.right); } });
+    cur = nxt;
+  }
+  return out;
+}
+function renderTree(elId, root, which){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  const lv = levelsOf(root);
+  const ordered = which === "merge" ? lv.slice().reverse() : lv;
+  el.innerHTML = "";
+  ordered.forEach((level, li) => {
+    const row = document.createElement("div");
+    row.className = "tlevel";
+    level.forEach(n => {
+      const arr = which === "merge" ? n.sorted : n.v;
+      const node = document.createElement("div");
+      node.className = "tnode" + (arr.length === 1 ? " leaf" : "");
+      arr.forEach(val => {
+        const c = document.createElement("span");
+        c.className = "tcell";
+        c.style.background = tint(val);
+        c.textContent = val;
+        node.appendChild(c);
+      });
+      row.appendChild(node);
+    });
+    el.appendChild(row);
+    if(li < ordered.length - 1){
+      const hint = document.createElement("div");
+      hint.className = "treehint";
+      hint.textContent = which === "merge" ? "merge pairs ↑" : "split each in half ↓";
+      el.appendChild(hint);
+    }
+  });
+}
+
+/* ============================================================
+   4. Stepper controller
+   ============================================================ */
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function Stepper(name, frames, render){
+  let at = 0, timer = null;
+  const trk = document.getElementById("trk-" + name);
+  const cap = document.getElementById("cap-" + name);
+  const btns = {};
+  document.querySelectorAll('[data-for="' + name + '"]').forEach(b => {
+    btns[b.dataset.act] = b;
+    b.addEventListener("click", () => act(b.dataset.act));
+  });
+
+  function draw(){
+    const fr = frames[at];
+    render(fr);
+    if(cap) cap.innerHTML = fr.note || "";
+    if(trk) trk.style.width = (frames.length < 2 ? 100 : (at / (frames.length - 1)) * 100) + "%";
+    if(btns.prev) btns.prev.disabled = at === 0;
+    if(btns.first) btns.first.disabled = at === 0;
+    if(btns.next) btns.next.disabled = at === frames.length - 1;
+    if(btns.last) btns.last.disabled = at === frames.length - 1;
+  }
+  function stop(){
+    if(timer){ clearInterval(timer); timer = null; }
+    if(btns.play) btns.play.textContent = "Play";
+  }
+  function act(a){
+    if(a === "play"){
+      if(timer){ stop(); return; }
+      if(at === frames.length - 1) at = 0;
+      btns.play.textContent = "Pause";
+      timer = setInterval(() => {
+        if(at >= frames.length - 1){ stop(); return; }
+        at++; draw();
+      }, reduced ? 1400 : 760);
+      draw();
+      return;
+    }
+    stop();
+    if(a === "next" && at < frames.length - 1) at++;
+    else if(a === "prev" && at > 0) at--;
+    else if(a === "first") at = 0;
+    else if(a === "last") at = frames.length - 1;
+    draw();
+  }
+  draw();
+}
+
+/* ============================================================
+   5. Boot
+   ============================================================ */
+function boot(){
+  Object.keys(SRC).forEach(k => renderCode("code-" + k, SRC[k]));
+  Object.keys(ANN).forEach(k => renderAnns("ann-" + k, ANN[k]));
+
+  /* --- bubble --- */
+  const BUB = [4, 6, 1, 8, 11, 13, 2];
+  setRange(BUB);
+  const bubCells = document.getElementById("cells-bubble");
+  Stepper("bubble", bubbleFrames(BUB), fr => {
+    paint(bubCells, fr.v, (i) => {
+      const cls = [];
+      if(i === fr.a || i === fr.b) cls.push("cmp");
+      if(i >= fr.v.length - fr.parked) cls.push("done");
+      return {cls: cls.join(" ")};
+    });
+  });
+
+  /* --- merge tree + merge loop --- */
+  const MRG = [1, 92, 9, 3, 6, 2, 33, 55];
+  setRange(MRG);
+  const tree = buildTree(MRG);
+  renderTree("tree-split", tree, "split");
+  renderTree("tree-merge", tree, "merge");
+
+  const mA = document.getElementById("cells-merge-a");
+  const mB = document.getElementById("cells-merge-b");
+  const mR = document.getElementById("cells-merge-r");
+  Stepper("merge", mergeFrames(tree.left.sorted, tree.right.sorted), fr => {
+    paint(mA, fr.a, i => ({cls: (fr.ha && i === 0) ? "cmp" : "", hideIdx:true}));
+    paint(mB, fr.b, i => ({cls: (fr.hb && i === 0) ? "cmp" : "", hideIdx:true}));
+    paint(mR, fr.r, () => ({hideIdx:true}));
+  });
+
+  /* --- pivot --- */
+  const PIV = [4, 6, 1, 19, 8, 11, 13, 3];
+  setRange(PIV);
+  const pvCells = document.getElementById("cells-pivot");
+  Stepper("pivot", pivotFrames(PIV), fr => {
+    paint(pvCells, fr.v, (i) => {
+      const cls = [];
+      if(i === fr.p) cls.push("piv");
+      if(i === fr.i) cls.push("cmp");
+      if(fr.done && i !== fr.p) cls.push("done");
+      return {cls: cls.join(" ")};
+    });
+  });
+}
+
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", boot);
+}else{
+  boot();
+}
+})();
+</script>
