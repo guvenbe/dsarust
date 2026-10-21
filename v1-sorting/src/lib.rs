@@ -1,4 +1,6 @@
-use std::fmt::Debug;
+pub mod b_rand;
+
+use std::{fmt::Debug, thread::scope};
 
 // O(n^2)
 pub fn bubble_sort<T: PartialOrd + Debug>(v: &mut [T]) {
@@ -72,6 +74,8 @@ pub fn merge_sort<T: PartialOrd + Debug>(mut v: Vec<T>) -> Vec<T> {
 // everthing higher should be after  it
 // return it's location
 pub fn pivot<T: PartialOrd>(v: &mut [T]) -> usize {
+    let mut p = b_rand::rand(v.len());
+    v.swap(p,0);
     let mut p = 0;
     for i in 1..v.len() {
         if v[i] < v[p] {
@@ -92,6 +96,30 @@ pub fn quick_sort<T: PartialOrd + Debug>(v: &mut [T]) {
     let (a, b) = v.split_at_mut(p);
     quick_sort(a);
     quick_sort(&mut b[1..]); //middle element already sorted
+    println!("quick {:?}", v);
+}
+pub fn threaded_quick_sort<T: PartialOrd + Debug + Send>(v: &mut [T]) {
+    if v.len() <= 1 {
+        return;
+    }
+    let p = pivot(v);
+    println!("{:?}", v);
+    let (a, b) = v.split_at_mut(p);
+    scope(|s| {
+        s.spawn(|| threaded_quick_sort(a));
+        threaded_quick_sort(&mut b[1..]); //middle element already sorted
+    });
+}
+
+pub fn quick_sort_rayon<T: Send +PartialOrd + Debug>(v: &mut [T]) {
+    if v.len() <= 1 {
+        return;
+    }
+    let p = pivot(v);
+    println!("{:?}", v);
+    let (a, b) = v.split_at_mut(p);
+    rayon::join(||quick_sort_rayon(a), ||quick_sort_rayon(&mut b[1..])); 
+    println!("quick_rayon {:?}", v);
 }
 
 #[cfg(test)]
@@ -136,5 +164,35 @@ mod tests {
         let mut v = vec![1, 2, 6, 7, 9, 12, 13, 14];
         quick_sort(&mut v);
         assert_eq!(v, vec![1, 2, 6, 7, 9, 12, 13, 14]);
+    }
+
+    #[test]
+    fn test_quick_sort_thread() {
+        let mut v = vec![4, 6, 1, 19, 8, 11, 13, 3];
+        threaded_quick_sort(&mut v);
+        assert_eq!(v, vec![1, 3, 4, 6, 8, 11, 13, 19]);
+
+        let mut v = vec![1, 2, 6, 7, 9, 12, 13, 14];
+        threaded_quick_sort(&mut v);
+        assert_eq!(v, vec![1, 2, 6, 7, 9, 12, 13, 14]);
+    }
+
+    #[test]
+    fn test_quick_sort_rayon() {
+        let mut v = vec![4, 6, 1, 19, 8, 11, 13, 3];
+        quick_sort_rayon(&mut v);
+        assert_eq!(v, vec![1, 3, 4, 6, 8, 11, 13, 19]);
+
+        let mut v = vec![1, 2, 6, 7, 9, 12, 13, 14];
+        quick_sort_rayon(&mut v);
+        assert_eq!(v, vec![1, 2, 6, 7, 9, 12, 13, 14]);
+        panic!();
+    }
+
+    #[test]
+    fn test_threaded_quick_sort() {
+        let mut v = vec![4, 6, 1, 19, 8, 11, 13, 3];
+        threaded_quick_sort(&mut v);
+        assert_eq!(v, vec![1, 3, 4, 6, 8, 11, 13, 19]);
     }
 }
